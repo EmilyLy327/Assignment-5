@@ -41,17 +41,18 @@ int main()
         // that the python server obtained from the QT client
         Mat overlayedImage = imread("assignment5_image.png");
 
+        // Declare fstream variable to parse parameter data
+        fstream parametersFromFile;
+
         // Declare variables to store brightness and contrast parameters
         int brightness;
         int contrast;
 
-        // Paramater brightness and contrast string data is 
-        // parsed from the saved paramater file that the python
+        // Parameter brightness and contrast string data is
+        // parsed from the saved parameter file that the python
         // server obtained from the QT client and is converted
         // back to integers
-        
-        // Declare fstream variable to parse paramater data
-        fstream parametersFromFile;
+
          // Open parameter file to read brightness and contrast values
         parametersFromFile.open("assignment5_parameters.txt");
         string line;
@@ -68,26 +69,26 @@ int main()
         // Convert contrast and brightness values back to original range (00-99)
         // Calculate necessary variables for overlay and update brightness and contrast
         int minimumValue = 0;
-        int maximumValue = 511 - 511.0 / 99.0 * contrast; 
+        int maximumValue = 511 - 511.0 / 99.0 * contrast;
         int brightnessMultiply = 2.0 / 99.0 * brightness;
-        int color; 
+        int color;
 
         // Create necessary Mats for overlay and brightness/contrast adjustment
         Mat resize1;
         Mat resize2;
         Mat outputImage = src.clone();
-        
+
         // Resize and convert overlay image to match camera feed formatThen create a look up table for the pixel values.
         resize(overlayedImage, resize1, Size(800, 480), INTER_LINEAR);
         cvtColor(resize1, resize2, COLOR_BGR2BGRA);
-        Mat pixelLookUp(1, 256, outputImage.type()); 
+        Mat pixelLookUp(1, 256, outputImage.type());
 
         // Apply brightness and contrast adjustment to each pixel using LUT
         for (int i = 0; i < 256; i++) {
             color = floor(brightnessMultiply * 255 * (i - minimumValue) / (maximumValue - minimumValue));
-            if (color > 255) 
+            if (color > 255)
                 color = 255;
-            
+
             // Update pixel lookup table for RGB channels
             pixelLookUp.at<Vec3b>(i)[0] = color; // R
             pixelLookUp.at<Vec3b>(i)[1] = color; // G
@@ -106,7 +107,7 @@ int main()
         Mat overlayedRoi = outputImage(roi);
         resize2(Rect(0, 0, qtrWidth, qtrHeight)).copyTo(overlayedRoi);
 		addWeighted(overlayedRoi, 1.0, resize2, 0.5, 0.0, overlayedRoi);
-        
+
         // Display the modified camera feed and overlay image
         imshow("Live Camera Input", src);
         imshow("Live Output Image", outputImage);
@@ -117,7 +118,7 @@ int main()
             break;
         }
     }
-    
+
     // Release capture object and close windows
     delete cap;
     destroyAllWindows();

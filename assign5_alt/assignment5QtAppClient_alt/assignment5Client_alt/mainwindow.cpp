@@ -4,11 +4,11 @@
 #include <QPainter>
 #include <QtNetwork>
 
-///Assigning port and ipaddress for communications
+/// Assigning port and ipaddress for communications
 /// IP address must match server and needs to be verified every session
 /// and updated accordingly, set up using UDP but tried TCP
 QTcpSocket* TCPSOCKET;
-QHostAddress TCPHOST = QHostAddress("192.168.1.32");
+QHostAddress TCPHOST = QHostAddress("192.168.1.109"); // Make sure to update this
 const static int TCPPORT = 80;
 
 std::string FPGAboardDisplayValues = "5050"; ///string to represent the seven segment displays initizlized

@@ -11,7 +11,7 @@ print ("HOSTNAME: " + str(hostName))
 print ("IPADDR: " + str(IP))
 
 TCPPORT = 80
-TCPIP = "192.168.1.100"
+TCPIP = "192.168.1.109"    # Make sure to update this 
 PACKETSIZE = 1024
 
 # Function is used to parse the inputed image data and reconstruct the 
