@@ -110,23 +110,25 @@ int main()
         cvtColor(resize1, resize2, COLOR_BGR2BGRA);
 
         // Calculate the region of interest (ROI) for overlaying
-        int qtrWidth = src.cols / 2;
-        int qtrHeight = src.rows / 2;
+        int qtrWidth = outputImage.cols / 2;
+        int qtrHeight = outputImage.rows / 2;
         Rect roi(0, 0, qtrWidth, qtrHeight);
+        resize(resize2, resize2, Size(qtrWidth, qtrHeight), INTER_LINEAR);
 
         // Overlay the adjusted image onto the camera feed
-        Mat overlayedRoi = src(roi);
-        resize2.copyTo(overlayedRoi);
+        Mat overlayedRoi = outputImage(roi);
+        resize2(Rect(0, 0, qtrWidth, qtrHeight)).copyTo(overlayedRoi);
         addWeighted(overlayedRoi, 1.0, resize2, 0.5, 0.0, overlayedRoi);
 
+        // Display brightness and contrast values on the output image
+        string brightnessText = "Brightness: " + to_string(brightness);
+        string contrastText = "Contrast: " + to_string(contrast);
+        putText(outputImage, brightnessText, Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
+        putText(outputImage, contrastText, Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
+        
         // Display the input and output images
         imshow("Live Camera Input", src);
         imshow("Live Output Image", outputImage);
-
-        // Display brightness and contrast values on the output image
-        char brightnessContrastStr[50];
-        sprintf(brightnessContrastStr, "Brightness: %d, Contrast: %d", brightness, contrast);
-        putText(src, brightnessContrastStr, Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
 
         // Exit if 'Esc' key is pressed
         int c = waitKey(10);
