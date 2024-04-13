@@ -1,27 +1,28 @@
-#include <opencv2/opencv.hpp>
-#include <sys/time.h>
-#include "D8MCapture.h"
-#include "hps_0.h"
-#include "string"
-#include "cmath"
-#include "fstream"
+#include <opencv2/opencv.hpp>  // Include OpenCV library
+#include <sys/time.h>          // Include sys/time.h for time-related functions
+#include "D8MCapture.h"        // Include D8MCapture header
+#include "hps_0.h"             // Include hps_0 header
+#include "string"              // Include string header
+#include "cmath"               // Include cmath header
+#include "fstream"             // Include fstream header for file operations
 
-using namespace cv;
-using namespace std;
+using namespace cv;            // Using OpenCV namespace
+using namespace std;           // Using standard namespace
 
 #ifndef CAPTURE_RAM_DEVICE
-#define CAPTURE_RAM_DEVICE "/dev/f2h-dma-memory"
+#define CAPTURE_RAM_DEVICE "/dev/f2h-dma-memory"    // Default RAM device if not defined
 #endif /* ifndef CAPTURE_RAM_DEVICE */
 
 int main()
 {
     Mat src; // Unmodified Camera Feed
     D8MCapture *cap = new D8MCapture(TV_DECODER_TERASIC_STREAM_CAPTURE_BASE, CAPTURE_RAM_DEVICE);
+    // Check if the capture object is successfully opened
     if (!cap->isOpened()) {
-        return -1;
+        return -1;              // Return -1 if capture object failed to open
     }
 
-    char str[100];
+    char str[100];                     // Character array for string manipulation
 
 	// Create windows for displaying the input and output images
     namedWindow("Live Camera Input");
@@ -32,9 +33,8 @@ int main()
         if (!cap->read(src))
             return -1;
 
-        // Get the overlayed image from the saved image file
+        // Read overlay image from the saved file "assignment5_image.png"
         // that the python server obtained from the QT client
-        // output error if the image failed to load
         Mat QTImage = imread("assignment5_image.png");
         if (QTImage.empty()) {
             cout << "Failed to load the overlay image." << endl;
@@ -53,65 +53,56 @@ int main()
         // back to integers
         parametersFromFile.open("assignment5_parameters.txt");
         string line;
+
+        // Read brightness value from the file and convert to integer
         getline(parametersFromFile, line);
         brightness = stoi(line);
+        // Read contrast value from the file and convert to integer
         getline(parametersFromFile, line);
         contrast = stoi(line);
+        // Close the parameter file
         parametersFromFile.close();
 
         // Create a clone of the overlaid image for adjustments
         Mat adjustedQTImage = QTImage.clone();
 
-        // Convert the contrast and brightness back to original values
-        // (Was in the range 00-99). Create the necessary variables to be used to overlay
-        // and update brightness and contrast. Then overlay onto the incoming camera
-        // feed, and change the overlayed image to be the same frame format
-        // as the video stream. Then create a look up table for the pixel values.
-        // Apply brightness and contrast to the RGB channels of each pixel. Then
-        // update the look up table for the output to apply the brightness and contrast.
-        int minimumValue = 0;
-        int maximumValue = 511 - 511.0 / 99.0 * contrast; 
-        int brightnessMultiply = 2.0 / 99.0 * brightness;
-        int color; 
+        // Convert contrast and brightness values back to original range (00-99)
+        // Calculate necessary variables for overlay and update brightness and contrast
+        double brightnessAdjust = (brightness - 50) / 50.0;
+        double contrastAdjust = contrast / 255.0;
 
         // Create a lookup table for adjusting pixel values
-        Mat QTImagePixelLookUp(1, 256, adjustedQTImage.type());
+        Mat QTImagePixelLookUp(1, 256, CV_8UC1);
 
         // Adjust brightness and contrast of the overlaid image
         for (int i = 0; i < 256; i++) {
-            color = floor(brightnessMultiply * 255 * (i - minimumValue) / (maximumValue - minimumValue));
-            if (color > 255)
-                color = 255;
-
-            QTImagePixelLookUp.at<Vec3b>(i)[0] = color; // R
-            QTImagePixelLookUp.at<Vec3b>(i)[1] = color; // G
-            QTImagePixelLookUp.at<Vec3b>(i)[2] = color; // B
+            int color = static_cast<int>((i + (brightnessAdjust * 128)) * contrastAdjust);
+            color = saturate_cast<uchar>(color);
+            QTImagePixelLookUp.at<uchar>(i) = color;
         }
+
+        // Apply the lookup table to the overlaid image
         LUT(adjustedQTImage, QTImagePixelLookUp, adjustedQTImage);
 
         // Create a clone of the camera feed for adjustments
         Mat outputImage = src.clone();
 
         // Variables for brightness and contrast adjustment of the camera feed
-        int cameraMinimumValue = 0;
-        int cameraMaximumValue = 511 - 511.0 / 99.0 * contrast;
-        int cameraBrightnessMultiply = 2.0 / 99.0 * brightness;
+        double cameraBrightnessAdjust = (brightness - 50) / 50.0;
+        double cameraContrastAdjust = contrast / 255.0;
 
         // Create a lookup table for adjusting pixel values of the camera feed
-        Mat cameraPixelLookUp(1, 256, outputImage.type());
+        Mat cameraPixelLookUp(1, 256, CV_8UC1);
 
         // Adjust brightness and contrast of the camera feed
         for (int i = 0; i < 256; i++) {
-            color = floor(cameraBrightnessMultiply * 255 * (i - cameraMinimumValue) / (cameraMaximumValue - cameraMinimumValue));
-            if (color > 255)
-                color = 255;
-
-            cameraPixelLookUp.at<Vec3b>(i)[0] = color; // R
-            cameraPixelLookUp.at<Vec3b>(i)[1] = color; // G
-            cameraPixelLookUp.at<Vec3b>(i)[2] = color; // B
+            int color = static_cast<int>((i + (cameraBrightnessAdjust * 128)) * cameraContrastAdjust);
+            color = saturate_cast<uchar>(color);
+            cameraPixelLookUp.at<uchar>(i) = color;
         }
-        LUT(outputImage, cameraPixelLookUp, outputImage);
 
+        // Apply the lookup table to the camera feed
+        LUT(outputImage, cameraPixelLookUp, outputImage);       
 
         // Resize the adjusted overlaid image
         Mat resize1, resize2;
@@ -144,9 +135,9 @@ int main()
         }
     }
 
-    // Clean up
+    // Release capture object and close windows
     delete cap;
     destroyAllWindows();
 
-    return 0;
+    return 0;  // Return 0 to indicate successful execution
 }

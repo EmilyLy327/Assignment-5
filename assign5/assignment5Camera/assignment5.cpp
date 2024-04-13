@@ -22,13 +22,6 @@ int main()
         return -1;              // Return -1 if capture object failed to open
     }
 
-    char str[100];                     // Character array for string manipulation
-    static struct timeval last_time;   // Static struct for storing last time
-    struct timeval current_time;       // Struct for storing current time
-    static float last_fps;             // Static variable for storing last frames per second
-    float t;                           // Variable for storing time
-    float fps;                         // Variable for storing frames per second
-
 	// Window to display the camera feed and overlay image
     namedWindow("ECE484W_Assignment_5");
 
@@ -66,13 +59,6 @@ int main()
         // Close the parameter file
         parametersFromFile.close();
 
-        // Convert contrast and brightness values back to original range (00-99)
-        // Calculate necessary variables for overlay and update brightness and contrast
-        int minimumValue = 0;
-        int maximumValue = 511 - 511.0 / 99.0 * contrast;
-        int brightnessMultiply = 2.0 / 99.0 * brightness;
-        int color;
-
         // Create necessary Mats for overlay and brightness/contrast adjustment
         Mat resize1;
         Mat resize2;
@@ -81,18 +67,15 @@ int main()
         // Resize and convert overlay image to match camera feed formatThen create a look up table for the pixel values.
         resize(overlayedImage, resize1, Size(800, 480), INTER_LINEAR);
         cvtColor(resize1, resize2, COLOR_BGR2BGRA);
-        Mat pixelLookUp(1, 256, outputImage.type());
+   
+       // Create lookup table for brightness and contrast adjustment
+        Mat pixelLookUp(1, 256, CV_8UC1);
+        double brightnessAdjust = (brightness - 50) / 50.0;
+        double contrastAdjust = contrast / 255.0;
 
-        // Apply brightness and contrast adjustment to each pixel using LUT
         for (int i = 0; i < 256; i++) {
-            color = floor(brightnessMultiply * 255 * (i - minimumValue) / (maximumValue - minimumValue));
-            if (color > 255)
-                color = 255;
-
-            // Update pixel lookup table for RGB channels
-            pixelLookUp.at<Vec3b>(i)[0] = color; // R
-            pixelLookUp.at<Vec3b>(i)[1] = color; // G
-            pixelLookUp.at<Vec3b>(i)[2] = color; // B
+            int lut = saturate_cast<uchar>((i + (brightnessAdjust * 128)) * contrastAdjust);
+            pixelLookUp.at<uchar>(i) = lut;
         }
 
         // Apply the lookup table to adjust brightness and contrast of the output image
