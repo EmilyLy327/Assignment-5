@@ -37,4 +37,4 @@ Located in assign5_alt folder.  Changes were made only to the assignment5.cpp an
 1. assignment5_alt_overlay_changes: Only overlay brightness and contrast adjust on the display.  This uses lookup table (LUT) instead of direct arithmetic adjustments as the original assignment5.cpp file did.  Additional displays for the brightness, contrast, and frame per second (FPS) were included in this.  You can see the average FPS for LUT is slower.
 2. assignment5_alt_alt_both_change: Both overlay image and Video feed brightness and contrast adjust on the display.  This also uses LUT. Additional displays for the brightness, contrast, and frame per second were included in this.
 
-To be able to use the alternative designs.  Rename the file to assignment5.cpp then reupload it onto the board.
+To be able to use the alternative designs.  Rename the file to assignment5.cpp then reupload it onto the board.  Make clean and then Make using either PuTTY or the LX Terminal onboard.  Run the assignment5.py through the PuTTY, run the QT application and load image, and then run the assignment5.cpp on the LX terminal onboard.
