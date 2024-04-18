@@ -33,4 +33,8 @@ Don't think the order matters as long as not trying to shut down while data bein
 3. Stop client 
 
 Alternative Designs:
-Located in 
+Located in assign5_alt folder.  Changes were made only to the assignment5.cpp and renamed to the following below:
+1. assignment5_alt_overlay_changes: Only overlay brightness and contrast adjust on the display.  This uses lookup table (LUT) instead of direct arithmetic adjustments as the original assignment5.cpp file did.  Additional displays for the brightness, contrast, and frame per second (FPS) were included in this.  You can see the average FPS for LUT is slower.
+2. assignment5_alt_alt_both_change: Both overlay image and Video feed brightness and contrast adjust on the display.  This also uses LUT. Additional displays for the brightness, contrast, and frame per second were included in this.
+
+To be able to use the alternative designs.  Rename the file to assignment5.cpp then reupload it onto the board.
