@@ -1,3 +1,10 @@
+/*This program performs real-time image processing by capturing frames from a camera, 
+applying brightness and contrast adjustments to only an overlaid image, 
+and displaying the processed output. 
+It uses OpenCV functions for image manipulation and GUI display.
+Uses LUT
+*/
+
 #include <opencv2/opencv.hpp>  // Include OpenCV library
 #include <sys/time.h>          // Include sys/time.h for time-related functions
 #include "D8MCapture.h"        // Include D8MCapture header
@@ -30,13 +37,17 @@ int main()
     int64 prevTick = 0;
 
     while (1) {
-        // Read frame from the camera feed
+        // Read a frame from the camera
         if (!cap->read(src))
             return -1;
 
         // Read overlay image from the saved file "assignment5_image.png"
         // that the python server obtained from the QT client
-        Mat overlayedImage = imread("assignment5_image.png");
+        Mat QTImage = imread("assignment5_image.png");
+        if (QTImage.empty()) {
+            cout << "Failed to load the overlay image." << endl;
+            return -1;
+        }
 
         // Declare fstream variable to parse parameter data
         fstream parametersFromFile;
@@ -45,12 +56,10 @@ int main()
         int brightness;
         int contrast;
 
-        // Parameter brightness and contrast string data is
-        // parsed from the saved parameter file that the python
+        // Paramater brightness and contrast string data is 
+        // parsed from the saved paramater file that the python
         // server obtained from the QT client and is converted
         // back to integers
-
-         // Open parameter file to read brightness and contrast values
         parametersFromFile.open("assignment5_parameters.txt");
         string line;
 
@@ -63,27 +72,44 @@ int main()
         // Close the parameter file
         parametersFromFile.close();
 
-        // Create necessary Mats for overlay and brightness/contrast adjustment
-        Mat resize1;
-        Mat resize2;
+        // Create a clone of the overlaid image for adjustments
+        Mat adjustedQTImage = QTImage.clone();
+
+        // Convert contrast and brightness values back to original range (00-99)
+        // Calculate necessary variables for overlay and update brightness and contrast
+        double brightnessAdjust = (brightness - 50) / 50.0;
+        double contrastAdjust = contrast / 255.0;
+
+        // Create a lookup table for adjusting pixel values
+        Mat QTImagePixelLookUp(1, 256, CV_8UC1);
+
+        // Adjust brightness and contrast of the overlaid image
+        for (int i = 0; i < 256; i++) {
+            int color = static_cast<int>((i + (brightnessAdjust * 128)) * contrastAdjust);
+            color = saturate_cast<uchar>(color);
+            QTImagePixelLookUp.at<uchar>(i) = color;
+        }
+
+        // Apply the lookup table to the overlaid image
+        LUT(adjustedQTImage, QTImagePixelLookUp, adjustedQTImage);
+
+        // Create a clone of the camera feed for adjustments
         Mat outputImage = src.clone();
 
-        // Resize and convert overlay image to match camera feed format
-        resize(overlayedImage, resize1, Size(800, 480), INTER_LINEAR);
+        // Resize the adjusted overlaid image
+        Mat resize1, resize2;
+        resize(adjustedQTImage, resize1, Size(src.cols / 2, src.rows / 2), INTER_LINEAR);
         cvtColor(resize1, resize2, COLOR_BGR2BGRA);
-   
-        // Apply brightness and contrast adjustments to the live camera feed
-        double brightnessAdjust = brightness - 50;
-        double contrastAdjust = contrast / 255.0;
-        outputImage.convertTo(outputImage, -1, contrastAdjust, brightnessAdjust);
 
-        // Calculate region of interest (ROI) and overlay the resized image onto it
-        // Overlayed image to cover 25% of output (ROI) in the upper left of output
-        int qtrWidth = outputImage.cols/2;
-        int qtrHeight = outputImage.rows/2;
+        // Calculate the region of interest (ROI) for overlaying
+        int qtrWidth = outputImage.cols / 2;
+        int qtrHeight = outputImage.rows / 2;
         Rect roi(0, 0, qtrWidth, qtrHeight);
         resize(resize2, resize2, Size(qtrWidth, qtrHeight), INTER_LINEAR);
+
+        // Overlay the adjusted image onto the camera feed
         Mat overlayedRoi = outputImage(roi);
+        resize2(Rect(0, 0, qtrWidth, qtrHeight)).copyTo(overlayedRoi);
         addWeighted(overlayedRoi, 1.0, resize2, 0.5, 0.0, overlayedRoi);
 
         // Calculate FPS
@@ -98,10 +124,16 @@ int main()
         fpsString = fpsString.substr(0, fpsString.find(".") + 3);
         putText(outputImage, fpsString, Point(outputImage.cols - 150, 30), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
 
-        // Display the modified camera feed and overlay image
-        imshow("Live Output Image", outputImage);
+        // Display brightness, contrast, and FPS values on the output image
+        string brightnessText = "Brightness: " + to_string(brightness);
+        string contrastText = "Contrast: " + to_string(contrast);
+        putText(outputImage, brightnessText, Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
+        putText(outputImage, contrastText, Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 0), 2);
 
-        // Bail out if escape was pressed
+        // Display the input and output images
+        imshow("Overlayed Image Changes", outputImage);
+
+        // Exit if 'Esc' key is pressed
         int c = waitKey(10);
         if ((char)c == 27) {
             break;
